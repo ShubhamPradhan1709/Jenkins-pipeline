@@ -1,0 +1,33 @@
+pipeline {
+  agent any
+  tools {
+      go 'Go'
+      dockerTool 'Docker'
+  }
+  stages {
+    stage('Build') {
+      steps {
+          checkout([$class: 'GitSCM', branches: [[name: '*/dev']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[url: 'https://github.com/GauravMakhijani/FarmEasy/']]])
+          sh "go build"
+      }
+    }
+    stage("build Docker Image"){
+        steps{
+            script{
+                sh "docker build -t shubhu69/docker-gs-ping ." 
+            }
+        }
+    }
+    stage("push docker image"){
+        steps{
+            script{
+                withCredentials([string(credentialsId: 'dockerp', variable: 'password')]) {
+
+                    sh "docker login -u shubhu69 -p ${password}"
+                    sh "docker push shubhu69/docker-gs-ping"
+                    
+                }
+            }
+        }
+    }
+  }
