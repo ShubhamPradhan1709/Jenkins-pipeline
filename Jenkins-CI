@@ -4,30 +4,40 @@ pipeline {
       go 'Go'
       dockerTool 'Docker'
   }
+   
   stages {
-    stage('Build') {
+    stage('Fetch code from Github') {
       steps {
           checkout([$class: 'GitSCM', branches: [[name: '*/dev']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[url: 'https://github.com/GauravMakhijani/FarmEasy/']]])
-          sh "go build"
       }
     }
-    stage("build Docker Image"){
+    stage("Build Docker Image"){
         steps{
             script{
-                sh "docker build -t shubhu69/docker-gs-ping ." 
+                sh "docker build -t farmeasy-private ." 
             }
         }
     }
-    stage("push docker image"){
-        steps{
-            script{
-                withCredentials([string(credentialsId: 'dockerp', variable: 'password')]) {
-
-                    sh "docker login -u shubhu69 -p ${password}"
-                    sh "docker push shubhu69/docker-gs-ping"
-                    
-                }
-            }
-        }
+    stage("Push Docker Image"){
+        steps {
+         withCredentials([
+  [
+    $class: 'AmazonWebServicesCredentialsBinding',
+    accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+    secretKeyVariable: 'AWS_SECRET_ACCESS_KEY',
+    credentialsId: 'aws_credential'
+  ]
+]){
+    sh '''
+    aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 806531795069.dkr.ecr.us-east-1.amazonaws.com/farmeasy-private
+    docker tag farmeasy-private:latest 806531795069.dkr.ecr.us-east-1.amazonaws.com/farmeasy-private:latest
+    docker push 806531795069.dkr.ecr.us-east-1.amazonaws.com/farmeasy-private:latest
+    '''
+}
     }
+    }
+    
+    
+    
   }
+}
